@@ -71,7 +71,7 @@ static int skel_open(struct inode *inode, struct file *file)
 	int retval = 0;
 
 	subminor = iminor(inode);
-
+                            
 	interface = usb_find_interface(&skel_driver, subminor);
 	if (!interface) {
 		err ("%s - error, can't find device for minor %d",

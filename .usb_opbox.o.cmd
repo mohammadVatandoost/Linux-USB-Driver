@@ -15,6 +15,8 @@ deps_/media/mohammad/1ED9E8D6138E2910/Tutorial/Linux/USBDriver/V1/usb_opbox.o :=
   include/linux/compiler-gcc.h \
     $(wildcard include/config/retpoline.h) \
     $(wildcard include/config/arch/use/builtin/bswap.h) \
+  /media/mohammad/1ED9E8D6138E2910/Tutorial/Linux/USBDriver/V1/usb_opbox.h \
+    $(wildcard include/config/usb/dynamic/minors.h) \
   include/linux/module.h \
     $(wildcard include/config/modules.h) \
     $(wildcard include/config/sysfs.h) \
@@ -674,6 +676,17 @@ deps_/media/mohammad/1ED9E8D6138E2910/Tutorial/Linux/USBDriver/V1/usb_opbox.o :=
     $(wildcard include/config/modules/use/elf/rel.h) \
     $(wildcard include/config/modules/use/elf/rela.h) \
   arch/x86/include/asm/orc_types.h \
+  include/linux/slab.h \
+    $(wildcard include/config/debug/slab.h) \
+    $(wildcard include/config/failslab.h) \
+    $(wildcard include/config/memcg/kmem.h) \
+    $(wildcard include/config/have/hardened/usercopy/allocator.h) \
+    $(wildcard include/config/slab.h) \
+    $(wildcard include/config/slub.h) \
+    $(wildcard include/config/slob.h) \
+  include/linux/percpu-refcount.h \
+  include/linux/kasan.h \
+    $(wildcard include/config/kasan/generic.h) \
   include/linux/usb.h \
     $(wildcard include/config/usb/mon.h) \
     $(wildcard include/config/pm.h) \
@@ -864,7 +877,6 @@ deps_/media/mohammad/1ED9E8D6138E2910/Tutorial/Linux/USBDriver/V1/usb_opbox.o :=
     $(wildcard include/config/have/arch/hash.h) \
   include/linux/path.h \
   include/linux/list_lru.h \
-    $(wildcard include/config/memcg/kmem.h) \
   include/linux/shrinker.h \
   include/linux/capability.h \
   include/uapi/linux/capability.h \
