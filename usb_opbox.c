@@ -295,21 +295,11 @@ static ssize_t op_box_write(struct file *file, const char __user *buffer, size_t
 {
 	struct usb_opbox *dev;
 	int retval = 0;
-	bool policy;
-   // #if MISSILE_LAUNCHER == ML_THUNDER
-   // 	static int ml_led = 1;
-   // #endif
-	// u8 buf[8];
-	// __u8 cmd = ML_STOP;
+    char *dmadata;
 
 	DBG_INFO("op_box_write");
-	dev = file->private_data;
+	dev = (struct usb_opbox *)file->private_data;
 
-	// /* Lock this object. */
-	// if (down_interruptible(&dev->sem)) {
-	// 	retval = -ERESTARTSYS;
-	// 	goto exit;
-	// }
 
 	/* Verify that the device wasn't unplugged. */
 	if (! dev->udev) {
@@ -318,82 +308,43 @@ static ssize_t op_box_write(struct file *file, const char __user *buffer, size_t
 		goto exit;
 	}
 
-	// /* Verify that we actually have some data to write. */
-	// if (count == 0)
-	// 	goto unlock_exit;
-
-	// /* We only accept one-byte writes. */
-	// if (count != 1)
-	// 	count = 1;
-
-	// if (copy_from_user(&cmd, user_buf, count)) {
-	// 	retval = -EFAULT;
-	// 	goto unlock_exit;
-	// }
-
-	// policy = (cmd == ML_STOP || cmd == ML_UP || cmd == ML_DOWN
-	// 	  || cmd == ML_LEFT || cmd == ML_RIGHT || cmd == ML_UP_LEFT
-	// 	  || cmd == ML_DOWN_LEFT || cmd == ML_UP_RIGHT
-	// 	  || cmd == ML_DOWN_RIGHT || cmd == ML_FIRE);
-    // #if MISSILE_LAUNCHER == ML_THUNDER
-	//    policy = policy || (cmd == ML_LED);
-    // #endif
-	// if (!policy) {
-	// 	DBG_ERR("illegal command issued");
-	// 	retval = -0x2a;		/* scnr */
-	// 	goto unlock_exit;
-	// }
-
-	// memset(&buf, 0, sizeof(buf));
-    // #if MISSILE_LAUNCHER == ML_THUNDER
-	//   if (cmd == ML_LED) {
-	//  	buf[0] = ML_LED;
-	//  	buf[1] = ml_led;
-	//  	ml_led = 1 - ml_led;
-	//   } else {
-	// 	buf[0] = 0x02;
-	// 	buf[1] = cmd;
-    // 	}
-    // #else
-	//     buf[0] = 0x02;
-    // 	buf[1] = cmd;
-    // #endif
-	// /* The interrupt-in-endpoint handler also modifies dev->command. */
-	// spin_lock(&dev->cmd_spinlock);
-	// dev->command = cmd;
-	// spin_unlock(&dev->cmd_spinlock);
-    char *dmadata = kmalloc(count, GFP_KERNEL);
-	if (!dmadata)
-		return -ENOMEM;
-
-	dev = (struct usb_opbox *)file->private_data;
-	
-	// DBG_INFO("op_box_read control: %s", buffer);
-    DBG_INFO("buffer[0] : %02x", buffer[0]);
-    DBG_INFO("buffer[1] : %02x", buffer[1]);
-	dmadata[0] = 0x01;
-	dmadata[1] = 0x00;
-	retval = usb_control_msg(dev->udev,
+    if(buffer[0] == WRITE_CONTROL) {
+		DBG_INFO("op_box_write is WRITE_CONTROL");
+		dmadata = kmalloc(count-2, GFP_KERNEL);
+ 	    if (!dmadata) {
+			 return -ENOMEM;
+		 }
+		 // buffer[0] is flag and buffer[1] is control register
+		 int i=2;
+		 for(i=2; i<count; i++) {
+			dmadata[i-2] = buffer[i]; 
+		 }
+        //  dmadata[0] = 0x01 ;
+	    //  dmadata[1] = 0x00;
+		 retval = usb_control_msg(dev->udev,
 			usb_sndctrlpipe(dev->udev, 0),
 			OPBOX_CTRL_REGISTER_WRITE_VENDOER_REQUEST,
 			OPBOX_CTRL_REGISTER_WRITE_REQUEST_TYPE,
 			OPBOX_CTRL_REGISTER_WRITE_VALUE,
-			POWER_CTLR,
+			buffer[1],
 			(void *)dmadata,
-			count,
+			count-2,
 			2000);
 
-
-	if (retval < 0) {
-		DBG_ERR("usb_control_msg failed (%d)", retval);
-		// goto unlock_exit;
-	} else {
-		DBG_INFO("usb_control_msg writed succesfully");
-		/* We should have written only one byte. */
-    	retval = count;
+			if (retval < 0) {
+		       DBG_ERR("usb_control_msg failed (%d)", retval);
+	        } else {
+		       DBG_INFO("usb_control_msg writed succesfully");
+		       /* We should have written only one byte. */
+    	       retval = count-2;
+	        }		
 	}
-
 	
+	// DBG_INFO("op_box_read control: %s", buffer);
+    // DBG_INFO("buffer[0] : %02x", buffer[0]);
+    // DBG_INFO("buffer[1] : %02x", buffer[1]);
+	// dmadata[0] = 0x01;
+	// dmadata[1] = 0x00;
 
 exit:
 	return retval;

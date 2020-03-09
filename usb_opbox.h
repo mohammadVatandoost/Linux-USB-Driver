@@ -9,6 +9,7 @@
 #include <linux/uaccess.h> // for copy_from_user()
 
 #define READ_CONTROL	0x00
+#define WRITE_CONTROL	0x01
 
 #define OPBOX_CTRL_BUFFER_SIZE 	64 // Direction: IN/OUT, Type: Control, Packets: max. 64Bytes;
 
