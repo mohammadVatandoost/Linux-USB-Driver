@@ -338,13 +338,58 @@ static ssize_t op_box_write(struct file *file, const char __user *buffer, size_t
 		       /* We should have written only one byte. */
     	       retval = count-2;
 	        }		
+			kfree(dmadata);
+	} else if(buffer[0] == WRITE_DIRECT_RESET) {
+         DBG_INFO("op_box_write is WRITE_DIRECT");
+		dmadata = kmalloc(count-2, GFP_KERNEL);
+ 	    if (!dmadata) {
+			 return -ENOMEM;
+		 }
+
+		 retval = usb_control_msg(dev->udev,
+			usb_sndctrlpipe(dev->udev, 0),
+			buffer[1],
+			buffer[2],
+			0x00,
+			0x00,
+			(void *)dmadata,
+			0,
+			2000);
+
+			if (retval < 0) {
+		       DBG_ERR("WRITE_DIRECT failed (%d)", retval);
+	        } else {
+		       DBG_INFO("WRITE_DIRECT writed succesfully");
+		       /* We should have written only one byte. */
+    	       retval = 0;
+	        }
+			kfree(dmadata);
+	} else if(buffer[0] == WRITE_DIRECT_PULSE_AMPLITUDE) {
+		 DBG_INFO("op_box_write is WRITE_DIRECT_PULSE_AMPLITUDE");
+		dmadata = kmalloc(1, GFP_KERNEL);
+ 	    if (!dmadata) {
+			 return -ENOMEM;
+		 }
+
+		 retval = usb_control_msg(dev->udev,
+			usb_sndctrlpipe(dev->udev, 0),
+			PULSE_AMPLITUDE,
+			DIRECT_OUT_REQUEST_TYPE,
+			buffer[1],
+			0x00,
+			(void *)dmadata,
+			0,
+			2000);
+
+			if (retval < 0) {
+		       DBG_ERR("WRITE_DIRECT_PULSE_AMPLITUDE failed (%d)", retval);
+	        } else {
+		       DBG_INFO("WRITE_DIRECT_PULSE_AMPLITUDE writed succesfully");
+		       /* We should have written only one byte. */
+    	       retval = 0;
+	        }
+			kfree(dmadata);
 	}
-	
-	// DBG_INFO("op_box_read control: %s", buffer);
-    // DBG_INFO("buffer[0] : %02x", buffer[0]);
-    // DBG_INFO("buffer[1] : %02x", buffer[1]);
-	// dmadata[0] = 0x01;
-	// dmadata[1] = 0x00;
 
 exit:
 	return retval;
@@ -352,74 +397,102 @@ exit:
 
 static ssize_t op_box_read(struct file *file, char __user *buffer, size_t count, loff_t *ppos)
 {
-   struct usb_opbox *dev;
+    struct usb_opbox *dev;
 	int retval = 0;
-    // u8 buf[2];
-	// memset(&buf, 0, sizeof(buf));
-	// void *dmadata = kmalloc(count, GFP_KERNEL);
-	char *dmadata = kmalloc(count, GFP_KERNEL);
-	if (!dmadata)
-		return -ENOMEM;
+	int read_cnt;
+
+	char *dmadata;
 	dev = (struct usb_opbox *)file->private_data;
+    DBG_INFO("op_box_read");
+	/* Verify that the device wasn't unplugged. */
+	if (!dev->udev) {
+		retval = -ENODEV;
+		DBG_ERR("No device or device unplugged (%d)", retval);
+		goto exit;
+	}
 	
-	// DBG_INFO("op_box_read control: %s", buffer);
-    DBG_INFO("buffer[0] : %02x", buffer[0]);
-    DBG_INFO("buffer[1] : %02x", buffer[1]);
-    if(count == 2) {
-		if(buffer[0] == READ_CONTROL) {
-             DBG_INFO("op_box_read control read");
+ 
+    if(buffer[0] == READ_CONTROL) {
+		   DBG_INFO("buffer[0] : %02x", buffer[0]);
+           DBG_INFO("buffer[1] : %02x", buffer[1]);
+		 DBG_INFO("op_box_read control read");
+		dmadata = kmalloc(count, GFP_KERNEL);
+	    if (!dmadata) {
+			 DBG_INFO("op_box_read dmadata wrong initialize");
+            return -ENOMEM;
+		}       
 	         retval = usb_control_msg(dev->udev,
 			   usb_rcvctrlpipe(dev->udev, 0),
 			   OPBOX_CTRL_REGISTER_READ_VENDOER_REQUEST,
 			   OPBOX_CTRL_REGISTER_READ_REQUEST_TYPE,
 			   OPBOX_CTRL_REGISTER_READ_VALUE,
-			   POWER_CTLR,
+			   buffer[1],
 			   (void *)dmadata,  // &dmadata,
 			   sizeof(count),
 			   2000);
 
     	    if (retval < 0) {
 		       DBG_ERR("usb_control_msg failed (%d)", retval);
-		       // goto unlock_exit;
 	        } else {
-		      DBG_INFO("op_box_read usb_control_msg sended succefully");
-			  // if (copy_to_user(buffer, buf, count)) {
-               //     retval = -EFAULT;
-			  // } else {
-              //     retval = count;
-			  // 	DBG_INFO("op_box_read usb_control_msg readed succefully: %d", retval);
-			  // }
-			  retval = count;
-			   memset(&buffer, 0, count);
-			   memcpy(buffer, dmadata, count);
-			   DBG_INFO("buffer[0] : %02x", buffer[0]);
-               DBG_INFO("buffer[1] : %02x", buffer[1]);
+		      DBG_INFO("op_box_read usb_control_msg readed succefully");
+			   if (copy_to_user(buffer, dmadata, count)) {
+                  retval = -EFAULT;
+			   } else {
+                retval = count;
+			   }	
+			//    memset(&buffer, 0, count);
+			//    memcpy(buffer, dmadata, count);
+			  
 	        }
-		}
-      
-
-// 			int usb_control_msg(struct usb_device *dev, unsigned int pipe,
-// __u8 request, __u8 requesttype,
-// __u16 value, __u16 index,
-// void *data, __u16 size, int timeout);
-
-
-		// memcpy(buffer, dmadata, count);
      	kfree(dmadata);
-	} else {
-      DBG_INFO("op_box_read control data read");
-	  /* do a blocking bulk read to get data from the device */
-    	// retval = usb_bulk_msg(dev->udev,
-		// 	      usb_rcvbulkpipe(dev->udev, dev->bulk_in_endpointAddr),
-		// 	      dev->bulk_in_buffer,
-		// 	      min(dev->bulk_in_size, count),
-		// 	      &count, HZ*10);
-			/* if the read was successful, copy the data to userspace */
+		DBG_INFO("buffer[0] : %02x", (unsigned char)buffer[0]);
+        DBG_INFO("buffer[1] : %02x", (unsigned char)buffer[1]);
+	} else if( buffer[0] == READ_DIRECT ) {
+        DBG_INFO("op_box_read READ_DIRECT");
+		dmadata = kmalloc(count, GFP_KERNEL);
+	    if (!dmadata) {
+			 DBG_INFO("op_box_read dmadata wrong initialize");
+            return -ENOMEM;
+		}       
+	         retval = usb_control_msg(dev->udev,
+			   usb_rcvctrlpipe(dev->udev, 0),
+			   DIRECT_FRAME_READY,
+			   DIRECT_IN_REQUEST_TYPE,
+			   0x00,
+			   0x00,
+			   (void *)dmadata,  // &dmadata,
+			   sizeof(count),
+			   2000);
+
+    	    if (retval < 0) {
+		       DBG_ERR("usb_control_msg failed (%d)", retval);
+	        } else {
+		      DBG_INFO("op_box_read usb_control_msg readed succefully");
+			   if (copy_to_user(buffer, dmadata, count)) {
+                  retval = -EFAULT;
+			   } else {
+                retval = count;
+			   }	
+			//    memset(&buffer, 0, count);
+			//    memcpy(buffer, dmadata, count);
+			  
+	        }
+     	kfree(dmadata);
+		DBG_INFO("after readbuffer[0] : %02x", (unsigned char)buffer[0]);
+	} else if( buffer[0] == READ_DATA ){
+      DBG_INFO("op_box_read data read");
+	    /* do a blocking bulk read to get data from the device */
+	    retval = usb_bulk_msg(dev->udev,
+			      usb_rcvbulkpipe(dev->udev, dev->bulk_in_endpointAddr),
+			      dev->bulk_in_buffer,
+			      min(dev->bulk_in_size, count),
+			      &read_cnt, 2000);
 	    if (!retval) {
-		    if (copy_to_user(buffer, dev->bulk_in_buffer, count)) {
+		    if (copy_to_user(buffer, dev->bulk_in_buffer, min(count, read_cnt))) {
                 retval = -EFAULT;
 			} else {
-                retval = count;
+				DBG_INFO("op_box_read bulk data readed successfully");
+                retval = min(count, read_cnt);
 			}			   			   
 	    } else {
            DBG_ERR("read msg failed (%d)", retval);
@@ -427,9 +500,7 @@ static ssize_t op_box_read(struct file *file, char __user *buffer, size_t count,
 	}
 	
 	
-
-	
-
+exit:
 	return retval;
 }
 

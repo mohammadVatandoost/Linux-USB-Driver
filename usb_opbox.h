@@ -9,7 +9,15 @@
 #include <linux/uaccess.h> // for copy_from_user()
 
 #define READ_CONTROL	0x00
+#define READ_DIRECT	0x04
+#define READ_DATA	0x05
+
 #define WRITE_CONTROL	0x01
+#define WRITE_DIRECT_RESET	0x02
+#define WRITE_DIRECT_PULSE_AMPLITUDE	0x03
+
+#define DIRECT_OUT_REQUEST_TYPE		0x40
+#define DIRECT_IN_REQUEST_TYPE		0xC0
 
 #define OPBOX_CTRL_BUFFER_SIZE 	64 // Direction: IN/OUT, Type: Control, Packets: max. 64Bytes;
 
@@ -34,7 +42,7 @@
 #define RESET_FIFO         0xD2
 #define DIRECT_SW_TRIG         0xD3
 #define DIRECT_ACK         0xD4
-#define DIRECT_DATA_READY         0xD5
+#define DIRECT_FRAME_READY         0xD5
 #define PULSE_AMPLITUDE         0xD6
 #define USB_MODE         0xD7
 
